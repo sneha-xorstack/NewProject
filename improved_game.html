@@ -137,6 +137,60 @@
         .game-btn:hover {
             transform: translateY(-2px);
         }
+
+        /* Tutorial UI */
+        .tutorial-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 10px 16px;
+            display: none;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tutorial-title { font-weight: bold; }
+        .tutorial-message { font-size: 0.9rem; opacity: 0.9; }
+        .tutorial-actions button {
+            background: #FF9800;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .tutorial-highlight {
+            background: #FFD700 !important;
+            color: #333 !important;
+            animation: tutorial-pulse 1s infinite;
+            border: 3px solid #FF6B35 !important;
+        }
+        @keyframes tutorial-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .tutorial-complete-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+        }
+        .tutorial-complete-content {
+            background: #222;
+            padding: 24px 28px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 90vw;
+        }
     </style>
 </head>
 <body>
@@ -197,6 +251,25 @@
             </div>
         </div>
 
+        <!-- Tutorial Bar -->
+        <div id="tutorialBar" class="tutorial-bar">
+            <div>
+                <div id="tutorialTitle" class="tutorial-title"></div>
+                <div id="tutorialText" class="tutorial-message"></div>
+            </div>
+            <div class="tutorial-actions">
+                <button id="tutorialSkipBtn">Skip</button>
+            </div>
+        </div>
+
+        <div id="tutorialComplete" class="tutorial-complete-overlay">
+            <div class="tutorial-complete-content">
+                <h3 id="tutorialCompleteTitle" class="text-2xl mb-2">Level Complete</h3>
+                <p id="tutorialCompleteMsg" class="mb-4">Great job!</p>
+                <button id="tutorialNextBtn" class="game-btn add-btn">Next</button>
+            </div>
+        </div>
+
         <!-- Game Screen -->
         <div id="gameScreen" class="game-container p-4 hidden">
             <div class="flex items-center justify-between mb-4">
@@ -243,6 +316,11 @@
         let hintsRemaining = 0;
         let addsRemaining = 0;
         let gridColumns = 6;
+
+        // Tutorial State
+        let tutorialMode = true; // start in tutorial
+        let tutorialLevel = 1; // 1 -> 3x3 HV; 2 -> 5x5 diagonals sum-to-10; 3 -> normal game
+        let tutorialHesitationTimer = null;
 
         // Stage configurations - Updated to use even numbers for guaranteed clearance
         const stageConfigs = {
@@ -312,6 +390,13 @@
 
         function startGame(stage) {
             currentStage = stage;
+
+            // If tutorial not completed, gate into tutorial flow
+            if (tutorialMode && tutorialLevel < 3) {
+                startTutorialLevel(tutorialLevel);
+                return;
+            }
+
             const config = stageConfigs[currentDifficulty];
             const stageConfig = config.stages[stage - 1];
             
@@ -350,6 +435,7 @@
             }
             
             renderGrid();
+            setupTutorialHesitation();
         }
 
         function generateNumbers(count) {
@@ -634,6 +720,203 @@
             // Simple pause - could be expanded
             alert('Game Paused');
         }
+
+        function startTutorialLevel(level) {
+            const tutorialBar = document.getElementById('tutorialBar');
+            const titleEl = document.getElementById('tutorialTitle');
+            const textEl = document.getElementById('tutorialText');
+            const completeOverlay = document.getElementById('tutorialComplete');
+            const completeTitle = document.getElementById('tutorialCompleteTitle');
+            const completeMsg = document.getElementById('tutorialCompleteMsg');
+            const gameScreen = document.getElementById('gameScreen');
+            const stageSelection = document.getElementById('stageSelection');
+
+            stageSelection.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            tutorialBar.style.display = 'flex';
+
+            if (level === 1) {
+                titleEl.textContent = 'Level 1';
+                textEl.textContent = 'Tap horizontal or vertical adjacent pairs.';
+                gridColumns = 3;
+                hintsRemaining = 0;
+                addsRemaining = 0;
+                document.getElementById('hintsLeft').textContent = hintsRemaining;
+                document.getElementById('addsLeft').textContent = addsRemaining;
+                document.getElementById('stageTitle').textContent = 'Tutorial - Level 1';
+                // Predefined solvable 3x3 with HV pairs (8 numbers, one null)
+                gameGrid = [
+                    [1, 1, null],
+                    [3, 3, 7],
+                    [5, 5, 7]
+                ];
+                renderGrid();
+                setupTutorialHesitation();
+            } else if (level === 2) {
+                titleEl.textContent = 'Level 2';
+                textEl.textContent = 'Only diagonal adjacent pairs that sum to 10.';
+                gridColumns = 5;
+                hintsRemaining = 0;
+                addsRemaining = 0;
+                document.getElementById('hintsLeft').textContent = hintsRemaining;
+                document.getElementById('addsLeft').textContent = addsRemaining;
+                document.getElementById('stageTitle').textContent = 'Tutorial - Level 2';
+                // Predefined 5x5 that requires diagonal sum-to-10 matches
+                gameGrid = [
+                    [1, null, null, null, 9],
+                    [null, 2, null, 8, null],
+                    [null, null, 5, null, null],
+                    [null, 7, null, 3, null],
+                    [6, null, null, null, 4]
+                ];
+                renderGrid();
+                setupTutorialHesitation();
+            } else {
+                // Level 3: exit tutorial and start normal game flow
+                tutorialMode = false;
+                tutorialBar.style.display = 'none';
+                completeOverlay.style.display = 'none';
+                startGame(currentStage);
+            }
+        }
+
+        function isInTutorial() {
+            return tutorialMode && (tutorialLevel === 1 || tutorialLevel === 2);
+        }
+
+        function setupTutorialHesitation() {
+            clearTimeout(tutorialHesitationTimer);
+            if (!isInTutorial()) return;
+            tutorialHesitationTimer = setTimeout(() => {
+                // Highlight a valid move depending on tutorial level
+                if (tutorialLevel === 1) {
+                    // Find any horizontal/vertical adjacent equal pair
+                    for (let r = 0; r < gameGrid.length; r++) {
+                        for (let c = 0; c < gridColumns; c++) {
+                            const v = gameGrid[r][c];
+                            if (v === null || v === '') continue;
+                            const directions = [[0,1],[1,0],[-1,0],[0,-1]];
+                            for (const [dr, dc] of directions) {
+                                const nr = r + dr, nc = c + dc;
+                                if (nr>=0 && nr<gameGrid.length && nc>=0 && nc<gridColumns) {
+                                    const nv = gameGrid[nr][nc];
+                                    if (nv !== null && nv !== '' && nv === v) {
+                                        highlightCells([[r,c],[nr,nc]]);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (tutorialLevel === 2) {
+                    // Find diagonal adjacent pair summing to 10
+                    const diagDirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
+                    for (let r = 0; r < gameGrid.length; r++) {
+                        for (let c = 0; c < gridColumns; c++) {
+                            const v = gameGrid[r][c];
+                            if (v === null || v === '') continue;
+                            for (const [dr, dc] of diagDirs) {
+                                const nr = r + dr, nc = c + dc;
+                                if (nr>=0 && nr<gameGrid.length && nc>=0 && nc<gridColumns) {
+                                    const nv = gameGrid[nr][nc];
+                                    if (nv !== null && nv !== '' && v + nv === 10) {
+                                        highlightCells([[r,c],[nr,nc]]);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }, 3000);
+        }
+
+        function highlightCells(cells) {
+            cells.forEach(([r,c]) => {
+                const el = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                if (el) el.classList.add('tutorial-highlight');
+            });
+            setTimeout(() => {
+                cells.forEach(([r,c]) => {
+                    const el = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                    if (el) el.classList.remove('tutorial-highlight');
+                });
+            }, 2000);
+        }
+
+        // Gate selection rules during tutorial
+        const _originalIsAdjacent = isAdjacent;
+        const _originalIsValidMatch = isValidMatch;
+
+        function isAdjacent(cell1, cell2) {
+            if (!isInTutorial()) return _originalIsAdjacent(cell1, cell2);
+            if (tutorialLevel === 1) {
+                // Only direct H/V adjacency
+                const rowDiff = Math.abs(cell1.row - cell2.row);
+                const colDiff = Math.abs(cell1.col - cell2.col);
+                return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+            }
+            if (tutorialLevel === 2) {
+                // Only diagonal adjacency
+                const rowDiff = Math.abs(cell1.row - cell2.row);
+                const colDiff = Math.abs(cell1.col - cell2.col);
+                return rowDiff === 1 && colDiff === 1;
+            }
+            return _originalIsAdjacent(cell1, cell2);
+        }
+
+        function isValidMatch(num1, num2) {
+            if (!isInTutorial()) return _originalIsValidMatch(num1, num2);
+            if (tutorialLevel === 1) {
+                // Only identical numbers
+                return num1 === num2;
+            }
+            if (tutorialLevel === 2) {
+                // Only sum to 10
+                return num1 + num2 === 10;
+            }
+            return _originalIsValidMatch(num1, num2);
+        }
+
+        // Hook into render to check completion
+        const _originalRenderGrid = renderGrid;
+        function renderGrid() {
+            _originalRenderGrid();
+            if (isInTutorial()) {
+                checkTutorialCompletion();
+                setupTutorialHesitation();
+            }
+        }
+
+        function checkTutorialCompletion() {
+            // Completed when all non-null/'' values are cleared
+            for (let r = 0; r < gameGrid.length; r++) {
+                for (let c = 0; c < gridColumns; c++) {
+                    if (gameGrid[r] && gameGrid[r][c] !== null && gameGrid[r][c] !== '') {
+                        return;
+                    }
+                }
+            }
+            const completeOverlay = document.getElementById('tutorialComplete');
+            const completeTitle = document.getElementById('tutorialCompleteTitle');
+            const completeMsg = document.getElementById('tutorialCompleteMsg');
+            completeTitle.textContent = `Level ${tutorialLevel} Complete`;
+            completeMsg.textContent = tutorialLevel === 1 ? 'Great job! You matched horizontal/vertical pairs.' : 'Nice! Diagonal sum-to-10 pairs found.';
+            completeOverlay.style.display = 'flex';
+        }
+
+        // Tutorial controls
+        document.getElementById('tutorialSkipBtn').addEventListener('click', () => {
+            tutorialMode = false;
+            document.getElementById('tutorialBar').style.display = 'none';
+            document.getElementById('tutorialComplete').style.display = 'none';
+            startGame(currentStage || 1);
+        });
+        document.getElementById('tutorialNextBtn').addEventListener('click', () => {
+            document.getElementById('tutorialComplete').style.display = 'none';
+            tutorialLevel += 1;
+            startTutorialLevel(tutorialLevel);
+        });
 
         // Initialize
         showMainMenu();
