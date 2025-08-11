@@ -250,12 +250,34 @@ class InteractiveTutorial {
   showTutorial() {
     if (this.tutorialContainer) {
       this.tutorialContainer.style.display = 'block';
+      
+      // Hide main game features during interactive tutorial
+      const header = document.getElementById('header');
+      const matchCounts = document.getElementById('match-counts');
+      const buttonsContainer = document.getElementById('buttons-container');
+      const leftoverCount = document.getElementById('leftover-count');
+      
+      if (header) header.style.display = 'none';
+      if (matchCounts) matchCounts.style.display = 'none';
+      if (buttonsContainer) buttonsContainer.style.display = 'none';
+      if (leftoverCount) leftoverCount.style.display = 'none';
     }
   }
   
   hideTutorial() {
     if (this.tutorialContainer) {
       this.tutorialContainer.style.display = 'none';
+      
+      // Show main game features again when tutorial is hidden
+      const header = document.getElementById('header');
+      const matchCounts = document.getElementById('match-counts');
+      const buttonsContainer = document.getElementById('buttons-container');
+      const leftoverCount = document.getElementById('leftover-count');
+      
+      if (header) header.style.display = 'flex';
+      if (matchCounts) matchCounts.style.display = 'flex';
+      if (buttonsContainer) buttonsContainer.style.display = 'flex';
+      if (leftoverCount) leftoverCount.style.display = 'block';
     }
   }
   
@@ -376,6 +398,9 @@ class InteractiveTutorial {
     
     // Reset instructions
     this.instructions.textContent = 'Click "Start Tutorial" to begin. Follow the highlighted pairs in order!';
+    
+    // Hide tutorial and restore main game features
+    this.hideTutorial();
   }
 }
 
