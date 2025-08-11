@@ -220,6 +220,7 @@ let score = 0;
 let bestScore = localStorage.getItem('nimblemind-best-score') || 0;
 let hintsLeft = 3;
 let addRowClickedCount = 0;
+const MAX_ADD_ROW_USES = 5;
 
 let inTutorial = false;
 let tutorialLevel = 0; // 0 = none, 1 = 3x3, 2 = 5x5
@@ -1120,6 +1121,7 @@ function generateInitialGrid() {
 /* add a new row at bottom with intelligent options */
 function addRow() {
   if (currentRows >= totalRows) { showMessage('Grid is full'); return; }
+  if (addRowClickedCount >= MAX_ADD_ROW_USES) { showMessage('Maximum add row uses reached'); return; }
   addRowClickedCount++;
   const newRow = new Array(numColumns).fill(null);
   // gather unmatched values
@@ -1158,6 +1160,7 @@ function addRow() {
   grid[currentRows] = newRow.slice();
   currentRows++;
   renderGrid();
+  updateAddRowButton();
   checkGameStatus();
 }
 
@@ -1196,6 +1199,16 @@ function updateHintButton(){
   if (hintsLeft <= 0) hintButton.classList.add('disabled'); else hintButton.classList.remove('disabled');
 }
 
+function updateAddRowButton(){
+  const remainingUses = MAX_ADD_ROW_USES - addRowClickedCount;
+  addRowButton.textContent = `+ Add Row (${remainingUses})`;
+  if (addRowClickedCount >= MAX_ADD_ROW_USES) {
+    addRowButton.classList.add('disabled');
+  } else {
+    addRowButton.classList.remove('disabled');
+  }
+}
+
 function showMessage(text, timeout=1400){
   messageBox.textContent = text;
   messageBox.style.display = 'block';
@@ -1231,12 +1244,10 @@ function checkGameStatus(){
     setTimeout(startGame, 1200);
     return;
   }
-  if (matches.length === 0) {
-    // allow add-row
-    addRowButton.classList.remove('disabled');
+  if (matches.length === 0 && addRowClickedCount >= MAX_ADD_ROW_USES) {
+    showMessage('No more pairs and no add row uses left — game over!');
+  } else if (matches.length === 0) {
     showMessage('No more pairs — add a row to continue');
-  } else {
-    addRowButton.classList.add('disabled');
   }
 }
 
@@ -1256,6 +1267,7 @@ function startGame() {
   dulledNumbers = {};
   updateScoreDisplay();
   updateHintButton();
+  updateAddRowButton();
   generateInitialGrid();
   renderGrid();
   checkGameStatus();
@@ -1280,6 +1292,7 @@ overlaySkip.addEventListener('click', ()=> {
 
 addRowButton.addEventListener('click', ()=> {
   if (addRowButton.classList.contains('disabled')) return;
+  if (addRowClickedCount >= MAX_ADD_ROW_USES) return;
   addRow();
 });
 hintButton.addEventListener('click', ()=> {
