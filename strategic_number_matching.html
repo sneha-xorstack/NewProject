@@ -158,16 +158,6 @@
     <div id="app" class="min-h-screen p-4">
         <!-- Main Menu -->
         <div id="mainMenu" class="game-container p-6">
-            <div class="flex items-center justify-between mb-4">
-                <button class="back-btn game-btn" onclick="exitOrAbout()">
-                    <i class="fas fa-arrow-left"></i> Home
-                </button>
-                <div></div>
-                <button class="back-btn game-btn" onclick="showSettings()">
-                    <i class="fas fa-cog"></i>
-                </button>
-            </div>
-            
             <h1 class="text-3xl font-bold text-white text-center mb-2">Strategic Number Matching</h1>
             <h2 class="text-lg font-bold text-yellow-300 text-center mb-4">🚫 NO L-SHAPES - ZERO LEFTOVERS 🚫</h2>
             <p class="text-white text-center mb-8">Straight lines only - Every number guaranteed clearable!</p>
@@ -352,16 +342,6 @@
             document.getElementById('stageSelection').classList.remove('hidden');
             document.getElementById('gameScreen').classList.add('hidden');
             stopAI();
-        }
-        
-        function exitOrAbout() {
-            // Show about info or exit confirmation
-            showPopup("Strategic Number Matching Game\n\nCreated for ultimate number puzzle experience!\n\nClick OK to continue or close the app if desired.", "Continue");
-        }
-        
-        function showSettings() {
-            // Show settings popup
-            showPopup("Settings\n\nGame settings and preferences would go here in a full implementation.", "OK");
         }
 
         function startGame(stage) {
@@ -954,16 +934,6 @@
             // Analyze current grid for unmatched numbers
             const remainingNumbers = getRemainingNumbers();
             
-            // Calculate sum of all existing numbers in the grid
-            let totalSum = 0;
-            for (let i = 0; i < gameGrid.length; i++) {
-                for (let j = 0; j < gameGrid[i].length; j++) {
-                    if (gameGrid[i][j] !== null) {
-                        totalSum += gameGrid[i][j];
-                    }
-                }
-            }
-            
             if (remainingNumbers.length === 0) {
                 console.log('🎉 Grid is already empty, adding bonus row');
                 // Grid is empty, just add a standard paired row
@@ -979,22 +949,11 @@
                     bonusRow.push(bonusRow[0]);
                 }
                 
-                // Add sum at the end if there's space, otherwise replace last element
-                const finalRow = bonusRow.slice(0, gridColumns);
-                if (totalSum > 0) {
-                    finalRow[gridColumns - 1] = totalSum;
-                }
-                
-                gameGrid.push(finalRow);
+                gameGrid.push(bonusRow.slice(0, gridColumns));
             } else {
                 // Analyze unmatched numbers and generate strategic row
                 const unmatchedNumbers = analyzeUnmatchedNumbers(remainingNumbers);
                 const newRow = generateStrategicNewRow(unmatchedNumbers);
-                
-                // Add sum of all existing numbers at the end of the new row
-                if (totalSum > 0) {
-                    newRow[gridColumns - 1] = totalSum;
-                }
                 
                 console.log('🚀 Adding strategic row to help clear unmatched numbers');
                 gameGrid.push(newRow);
@@ -1007,12 +966,8 @@
             if (remainingNumbers.length > 0) {
                 const unmatchedCount = analyzeUnmatchedNumbers(remainingNumbers).length;
                 if (unmatchedCount > 0) {
-                    showPopup(`✨ Added strategic row to help clear ${unmatchedCount} unmatched number(s)! Sum: ${totalSum}`, "Got it!");
-                } else {
-                    showPopup(`✨ Added strategic row! Sum: ${totalSum}`, "Got it!");
+                    showPopup(`✨ Added strategic row to help clear ${unmatchedCount} unmatched number(s)!`, "Got it!");
                 }
-            } else {
-                showPopup(`✨ Added bonus row! Sum: ${totalSum}`, "Got it!");
             }
         }
 
