@@ -112,7 +112,10 @@
     <div class="tutorial-box empty" data-number=""></div>
   </div>
   
-  <button id="start-interactive-tutorial">Start Tutorial</button>
+  <div style="display:flex;gap:8px;justify-content:center;margin-top:15px;">
+    <button id="tutorial-3x3-prev-button" class="overlay-button btn-skip">← Prev</button>
+    <button id="start-interactive-tutorial">Start Tutorial</button>
+  </div>
 </div>
 
 <!-- 5x5 Tutorial Container -->
@@ -159,7 +162,10 @@
     <div class="tutorial-box-5x5 empty" data-number=""></div>
   </div>
   
-  <button id="start-5x5-tutorial">Start 5×5 Tutorial</button>
+  <div style="display:flex;gap:8px;justify-content:center;margin-top:15px;">
+    <button id="tutorial-5x5-prev-button" class="overlay-button btn-skip">← Prev</button>
+    <button id="start-5x5-tutorial">Start 5×5 Tutorial</button>
+  </div>
 </div>
 
 <!-- Tutorial Success Popup -->
@@ -192,6 +198,7 @@
   <div id="leftover-count"></div>
 
   <div id="buttons-container">
+    <button id="game-prev-button" class="control-button" aria-label="Previous">← Prev</button>
     <button id="add-row-button" class="control-button" aria-label="Add row">+ Add Row</button>
     <button id="hint-button" class="control-button" aria-label="Hint">Hint</button>
     <button id="auto-solve-button" class="control-button" aria-label="Auto solve">Auto-Solve</button>
@@ -1126,9 +1133,13 @@ function addRow() {
   const newRow = new Array(numColumns).fill(null);
   // gather unmatched values
   const unmatched = [];
+  let totalSum = 0; // Sum of all existing numbers in the grid
   for (let r=0;r<currentRows; r++){
     for (let c=0;c<numColumns; c++){
-      if (grid[r][c] !== null) unmatched.push(grid[r][c]);
+      if (grid[r][c] !== null) {
+        unmatched.push(grid[r][c]);
+        totalSum += grid[r][c]; // Add to total sum
+      }
     }
   }
   // fill row depending on click count (as before)
@@ -1153,6 +1164,14 @@ function addRow() {
       }
     }
     for (let i=0;i<numColumns;i++) if (newRow[i] === null) newRow[i] = Math.floor(Math.random()*9)+1;
+  }
+
+  // Add the sum of all existing numbers at the end of the new row
+  if (totalSum > 0) {
+    // Find the last non-null position or use the last column
+    let lastPosition = numColumns - 1;
+    // Replace the last position with the sum
+    newRow[lastPosition] = totalSum;
   }
 
   // put newRow into grid at index currentRows (0-based)
@@ -1301,6 +1320,54 @@ hintButton.addEventListener('click', ()=> {
 });
 autoSolveButton.addEventListener('click', ()=> autoSolve());
 restartButton.addEventListener('click', ()=> startGame());
+
+// Prev button event listeners
+const gamePrevButton = document.getElementById('game-prev-button');
+const tutorial3x3PrevButton = document.getElementById('tutorial-3x3-prev-button');
+const tutorial5x5PrevButton = document.getElementById('tutorial-5x5-prev-button');
+
+if (gamePrevButton) {
+  gamePrevButton.addEventListener('click', ()=> {
+    if (inTutorial) {
+      // If in tutorial, go back to tutorial overlay
+      tutorialOverlay.style.display = 'flex';
+      if (interactiveTutorial) {
+        interactiveTutorial.hideTutorial();
+      }
+      if (tutorial5x5) {
+        tutorial5x5.hideTutorial();
+      }
+    } else {
+      // If in main game, show tutorial overlay or restart tutorial
+      tutorialOverlay.style.display = 'flex';
+      currentTutorialStep = 0;
+      showTutorialStep();
+    }
+  });
+}
+
+if (tutorial3x3PrevButton) {
+  tutorial3x3PrevButton.addEventListener('click', ()=> {
+    if (interactiveTutorial) {
+      interactiveTutorial.hideTutorial();
+    }
+    tutorialOverlay.style.display = 'flex';
+    currentTutorialStep = Math.max(0, currentTutorialStep - 1);
+    showTutorialStep();
+  });
+}
+
+if (tutorial5x5PrevButton) {
+  tutorial5x5PrevButton.addEventListener('click', ()=> {
+    if (tutorial5x5) {
+      tutorial5x5.hideTutorial();
+    }
+    // Go back to 3x3 tutorial
+    if (interactiveTutorial) {
+      interactiveTutorial.showTutorial();
+    }
+  });
+}
 
 /* On load: show tutorial overlay and run */
 window.addEventListener('load', ()=> {

@@ -111,7 +111,10 @@
     <div class="tutorial-box empty" data-number=""></div>
   </div>
   
-  <button id="start-interactive-tutorial">Start Tutorial</button>
+  <div style="display:flex;gap:8px;justify-content:center;margin-top:15px;">
+    <button id="tutorial-prev-button" class="overlay-button btn-skip">← Prev</button>
+    <button id="start-interactive-tutorial">Start Tutorial</button>
+  </div>
 </div>
 
 <!-- Tutorial Success Popup -->
@@ -124,6 +127,39 @@
 </div>
 
 <div id="message-box" role="status" aria-live="assertive"></div>
+
+<div id="game-container" role="main" aria-label="NimbleMind game">
+  <div id="header">
+    <div class="score-box">
+      <span>Score</span>
+      <div class="value" id="score-value">0</div>
+    </div>
+    <div class="score-box">
+      <span>Best</span>
+      <div class="value" id="best-score-value">0</div>
+    </div>
+  </div>
+
+  <div id="match-counts">
+    <div id="pair-matches">Pairs: 0</div>
+    <div id="sum-matches">Sum to 10: 0</div>
+  </div>
+
+  <div id="game-grid" aria-live="polite"></div>
+  <div id="leftover-count"></div>
+
+  <div id="buttons-container">
+    <button id="prev-button" class="control-button" aria-label="Previous">← Prev</button>
+    <button id="add-row-button" class="control-button" aria-label="Add row">+ Add Row</button>
+    <button id="hint-button" class="control-button" aria-label="Hint">Hint</button>
+    <button id="auto-solve-button" class="control-button" aria-label="Auto solve">Auto-Solve</button>
+  </div>
+
+  <div id="game-over-message">
+    <h2>Board Cleared!</h2>
+    <button id="restart-button" class="control-button">Restart Game</button>
+  </div>
+</div>
 
 <script>
 /* ----------------------------
@@ -164,6 +200,7 @@ const autoSolveButton = document.getElementById('auto-solve-button');
 const messageBox = document.getElementById('message-box');
 const restartButton = document.getElementById('restart-button');
 const leftoverCountElement = document.getElementById('leftover-count');
+const prevButton = document.getElementById('prev-button');
 
 const tutorialOverlay = document.getElementById('tutorial-overlay');
 const tutorialTitle = document.getElementById('tutorial-title');
@@ -835,9 +872,13 @@ function addRow() {
   const newRow = new Array(numColumns).fill(null);
   // gather unmatched values
   const unmatched = [];
+  let totalSum = 0; // Sum of all existing numbers in the grid
   for (let r=0;r<currentRows; r++){
     for (let c=0;c<numColumns; c++){
-      if (grid[r][c] !== null) unmatched.push(grid[r][c]);
+      if (grid[r][c] !== null) {
+        unmatched.push(grid[r][c]);
+        totalSum += grid[r][c]; // Add to total sum
+      }
     }
   }
   // fill row depending on click count (as before)
@@ -862,6 +903,14 @@ function addRow() {
       }
     }
     for (let i=0;i<numColumns;i++) if (newRow[i] === null) newRow[i] = Math.floor(Math.random()*9)+1;
+  }
+
+  // Add the sum of all existing numbers at the end of the new row
+  if (totalSum > 0) {
+    // Find the last non-null position or use the last column
+    let lastPosition = numColumns - 1;
+    // Replace the last position with the sum
+    newRow[lastPosition] = totalSum;
   }
 
   // put newRow into grid at index currentRows (0-based)
@@ -999,6 +1048,35 @@ hintButton.addEventListener('click', ()=> {
 });
 autoSolveButton.addEventListener('click', ()=> autoSolve());
 restartButton.addEventListener('click', ()=> startGame());
+
+// Prev button functionality - goes back to tutorial or main menu
+prevButton.addEventListener('click', ()=> {
+  if (inTutorial) {
+    // If in tutorial, go back to tutorial overlay
+    tutorialOverlay.style.display = 'flex';
+    if (interactiveTutorial) {
+      interactiveTutorial.hideTutorial();
+    }
+  } else {
+    // If in main game, show tutorial overlay or restart tutorial
+    tutorialOverlay.style.display = 'flex';
+    currentTutorialStep = 0;
+    showTutorialStep();
+  }
+});
+
+// Tutorial Prev button functionality
+const tutorialPrevButton = document.getElementById('tutorial-prev-button');
+if (tutorialPrevButton) {
+  tutorialPrevButton.addEventListener('click', ()=> {
+    if (interactiveTutorial) {
+      interactiveTutorial.hideTutorial();
+    }
+    tutorialOverlay.style.display = 'flex';
+    currentTutorialStep = Math.max(0, currentTutorialStep - 1);
+    showTutorialStep();
+  });
+}
 
 /* On load: show tutorial overlay and run */
 window.addEventListener('load', ()=> {
