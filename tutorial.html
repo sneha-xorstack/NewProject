@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Tutorial - 3×3 Grid</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        #game-container {
+            width: 90%;
+            max-width: 500px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 15px;
+        }
+
+        .box {
+            width: 80px;
+            height: 80px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            position: relative;
+        }
+
+        .box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Highlighted state for current pair */
+        .box.highlighted {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border: 3px solid #f59e0b;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+            animation: glow 1.5s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+            to { box-shadow: 0 0 30px rgba(245, 158, 11, 0.7); }
+        }
+
+        /* Clicked state */
+        .box.clicked {
+            background: #48bb78;
+            color: white;
+            border: 3px solid #38a169;
+            transform: scale(0.95);
+        }
+
+        /* Blurred state after pair completion */
+        .box.completed {
+            filter: blur(3px);
+            opacity: 0.6;
+            background: #cbd5e0;
+            color: #718096;
+            pointer-events: none;
+            transform: scale(0.9);
+        }
+
+        #start-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        #start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        #start-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Success popup */
+        #success-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .popup-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            animation: popupScale 0.3s ease-out;
+        }
+
+        @keyframes popupScale {
+            from { transform: scale(0.7); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .popup-content h2 {
+            color: #48bb78;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .popup-content p {
+            color: #4a5568;
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+        }
+
+        #next-button {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #next-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(72, 187, 120, 0.3);
+        }
+
+        #instructions {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            color: #4a5568;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Interactive Tutorial</h1>
+        
+        <div id="instructions">
+            Click "Start Tutorial" to begin. Follow the highlighted pairs in order!
+        </div>
+        
+        <div id="grid-container">
+            <!-- Row 1 -->
+            <div class="box" data-number="1">1</div>
+            <div class="box" data-number="1">1</div>
+            <div class="box" data-number="2">2</div>
+            
+            <!-- Row 2 -->
+            <div class="box" data-number="3">3</div>
+            <div class="box" data-number="3">3</div>
+            <div class="box" data-number="2">2</div>
+            
+            <!-- Row 3 -->
+            <div class="box" data-number="4">4</div>
+            <div class="box" data-number="4">4</div>
+            <div class="box" data-number="5">5</div>
+        </div>
+        
+        <button id="start-button">Start Tutorial</button>
+    </div>
+
+    <!-- Success Popup -->
+    <div id="success-popup">
+        <div class="popup-content">
+            <h2>🎉 Hurray!</h2>
+            <p>You've completed all the pairs successfully!</p>
+            <button id="next-button">Next</button>
+        </div>
+    </div>
+
+    <script>
+        class TutorialGame {
+            constructor() {
+                this.currentStep = 0;
+                this.clickedBoxes = new Set();
+                this.isActive = false;
+                
+                // Define the pairs in order: [index1, index2] (0-based)
+                this.pairs = [
+                    [0, 1], // Pair 1: boxes with "1" (top-left, top-center)
+                    [2, 5], // Pair 2: boxes with "2" (top-right, middle-right)
+                    [3, 4], // Pair 3: boxes with "3" (middle-left, middle-center)
+                    [6, 7]  // Pair 4: boxes with "4" (bottom-left, bottom-center)
+                ];
+                
+                this.boxes = document.querySelectorAll('.box');
+                this.startButton = document.getElementById('start-button');
+                this.successPopup = document.getElementById('success-popup');
+                this.nextButton = document.getElementById('next-button');
+                this.instructions = document.getElementById('instructions');
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                this.startButton.addEventListener('click', () => this.startTutorial());
+                this.nextButton.addEventListener('click', () => this.closePopup());
+                
+                this.boxes.forEach((box, index) => {
+                    box.addEventListener('click', () => this.handleBoxClick(index));
+                });
+            }
+            
+            startTutorial() {
+                this.isActive = true;
+                this.currentStep = 0;
+                this.clickedBoxes.clear();
+                
+                // Reset all boxes
+                this.boxes.forEach(box => {
+                    box.classList.remove('highlighted', 'clicked', 'completed');
+                });
+                
+                // Disable start button
+                this.startButton.disabled = true;
+                this.startButton.textContent = 'Tutorial Active...';
+                
+                // Update instructions
+                this.instructions.textContent = `Step ${this.currentStep + 1}/4: Click both highlighted boxes with "${this.getCurrentPairNumber()}"`;
+                
+                // Highlight first pair
+                this.highlightCurrentPair();
+            }
+            
+            getCurrentPairNumber() {
+                const currentPair = this.pairs[this.currentStep];
+                const firstBoxIndex = currentPair[0];
+                return this.boxes[firstBoxIndex].textContent;
+            }
+            
+            highlightCurrentPair() {
+                if (this.currentStep < this.pairs.length) {
+                    const currentPair = this.pairs[this.currentStep];
+                    currentPair.forEach(index => {
+                        this.boxes[index].classList.add('highlighted');
+                    });
+                }
+            }
+            
+            handleBoxClick(index) {
+                if (!this.isActive) return;
+                
+                const currentPair = this.pairs[this.currentStep];
+                
+                // Only allow clicking highlighted boxes
+                if (!currentPair.includes(index)) return;
+                
+                // Don't allow clicking already clicked boxes
+                if (this.clickedBoxes.has(index)) return;
+                
+                // Mark as clicked
+                this.clickedBoxes.add(index);
+                this.boxes[index].classList.remove('highlighted');
+                this.boxes[index].classList.add('clicked');
+                
+                // Check if both boxes in current pair are clicked
+                const pairClicked = currentPair.every(boxIndex => this.clickedBoxes.has(boxIndex));
+                
+                if (pairClicked) {
+                    setTimeout(() => {
+                        this.completePair();
+                    }, 500);
+                }
+            }
+            
+            completePair() {
+                const currentPair = this.pairs[this.currentStep];
+                
+                // Blur completed pair
+                currentPair.forEach(index => {
+                    this.boxes[index].classList.remove('clicked');
+                    this.boxes[index].classList.add('completed');
+                });
+                
+                // Move to next step
+                this.currentStep++;
+                this.clickedBoxes.clear();
+                
+                if (this.currentStep < this.pairs.length) {
+                    // Continue to next pair
+                    setTimeout(() => {
+                        this.instructions.textContent = `Step ${this.currentStep + 1}/4: Click both highlighted boxes with "${this.getCurrentPairNumber()}"`;
+                        this.highlightCurrentPair();
+                    }, 300);
+                } else {
+                    // All pairs completed
+                    setTimeout(() => {
+                        this.showSuccessPopup();
+                    }, 500);
+                }
+            }
+            
+            showSuccessPopup() {
+                this.isActive = false;
+                this.instructions.textContent = 'Tutorial completed! Well done!';
+                this.successPopup.style.display = 'flex';
+            }
+            
+            closePopup() {
+                this.successPopup.style.display = 'none';
+                this.resetGame();
+            }
+            
+            resetGame() {
+                // Reset everything
+                this.currentStep = 0;
+                this.clickedBoxes.clear();
+                this.isActive = false;
+                
+                // Reset all boxes
+                this.boxes.forEach(box => {
+                    box.classList.remove('highlighted', 'clicked', 'completed');
+                });
+                
+                // Reset button
+                this.startButton.disabled = false;
+                this.startButton.textContent = 'Start Tutorial';
+                
+                // Reset instructions
+                this.instructions.textContent = 'Click "Start Tutorial" to begin. Follow the highlighted pairs in order!';
+            }
+        }
+
+        // Initialize the game when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new TutorialGame();
+        });
+    </script>
+</body>
+</html>
