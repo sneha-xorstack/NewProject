@@ -43,6 +43,29 @@
     /* Game over */
     #game-over-message { display:none; text-align:center; margin-top:14px; }
     #game-over-message h2 { color:#2563eb; }
+    
+    /* Interactive Tutorial Styles */
+    #interactive-tutorial-container { display:none; background:#fff; border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,0.08); padding:20px; margin:20px 0; }
+    #interactive-tutorial-container h2 { color:#2d3748; margin-bottom:15px; font-size:1.5rem; text-align:center; }
+    #tutorial-grid-container { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0; padding:15px; background:#f7fafc; border-radius:12px; max-width:280px; margin:20px auto; }
+    .tutorial-box { width:70px; height:70px; background:#e2e8f0; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; font-weight:700; color:#2d3748; cursor:pointer; transition:all 0.3s ease; border:3px solid transparent; position:relative; }
+    .tutorial-box:hover { transform:translateY(-2px); box-shadow:0 6px 12px rgba(0,0,0,0.1); }
+    .tutorial-box.highlighted { background:linear-gradient(135deg,#ffd700,#ffed4e); border:3px solid #f59e0b; box-shadow:0 0 15px rgba(245,158,11,0.4); animation:tutorialGlow 1.5s infinite alternate; }
+    @keyframes tutorialGlow { from{box-shadow:0 0 15px rgba(245,158,11,0.4)} to{box-shadow:0 0 25px rgba(245,158,11,0.7)} }
+    .tutorial-box.clicked { background:#48bb78; color:white; border:3px solid #38a169; transform:scale(0.95); }
+    .tutorial-box.completed { filter:blur(2px); opacity:0.6; background:#cbd5e0; color:#718096; pointer-events:none; transform:scale(0.9); }
+    .tutorial-box.empty { background:transparent; box-shadow:none; pointer-events:none; }
+    #tutorial-instructions { background:#edf2f7; padding:12px; border-radius:8px; margin:15px 0; text-align:center; color:#4a5568; font-weight:500; font-size:0.95rem; }
+    #start-interactive-tutorial { background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; border-radius:10px; padding:12px 24px; font-size:1rem; font-weight:700; cursor:pointer; transition:all 0.3s ease; margin:10px auto; display:block; }
+    #start-interactive-tutorial:hover { transform:translateY(-2px); box-shadow:0 8px 15px rgba(0,0,0,0.15); }
+    #start-interactive-tutorial:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+    #tutorial-success-popup { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:6000; }
+    .tutorial-popup-content { background:white; padding:30px; border-radius:16px; text-align:center; box-shadow:0 20px 40px rgba(0,0,0,0.25); animation:tutorialPopupScale 0.3s ease-out; max-width:320px; }
+    @keyframes tutorialPopupScale { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+    .tutorial-popup-content h2 { color:#48bb78; font-size:1.8rem; margin-bottom:15px; }
+    .tutorial-popup-content p { color:#4a5568; font-size:1rem; margin-bottom:20px; }
+    #tutorial-next-button { background:linear-gradient(135deg,#48bb78,#38a169); color:white; border:none; border-radius:10px; padding:12px 24px; font-size:1rem; font-weight:700; cursor:pointer; transition:all 0.3s ease; }
+    #tutorial-next-button:hover { transform:translateY(-2px); box-shadow:0 6px 12px rgba(72,187,120,0.3); }
 </style>
 </head>
 <body>
@@ -60,6 +83,42 @@
         <button class="overlay-button btn-start" id="overlay-next">Next</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Interactive Tutorial Container -->
+<div id="interactive-tutorial-container">
+  <h2>Interactive Tutorial</h2>
+  <div id="tutorial-instructions">
+    Click "Start Tutorial" to begin. Follow the highlighted pairs in order!
+  </div>
+  
+  <div id="tutorial-grid-container">
+    <!-- Row 1: [1] [1] [2] -->
+    <div class="tutorial-box" data-number="1">1</div>
+    <div class="tutorial-box" data-number="1">1</div>
+    <div class="tutorial-box" data-number="2">2</div>
+    
+    <!-- Row 2: [3] [3] [2] -->
+    <div class="tutorial-box" data-number="3">3</div>
+    <div class="tutorial-box" data-number="3">3</div>
+    <div class="tutorial-box" data-number="2">2</div>
+    
+    <!-- Row 3: [4] [4] [empty] -->
+    <div class="tutorial-box" data-number="4">4</div>
+    <div class="tutorial-box" data-number="4">4</div>
+    <div class="tutorial-box empty" data-number=""></div>
+  </div>
+  
+  <button id="start-interactive-tutorial">Start Tutorial</button>
+</div>
+
+<!-- Tutorial Success Popup -->
+<div id="tutorial-success-popup">
+  <div class="tutorial-popup-content">
+    <h2>🎉 Hurray!</h2>
+    <p>Go to Next</p>
+    <button id="tutorial-next-button">Next</button>
   </div>
 </div>
 
@@ -148,6 +207,181 @@ const overlaySkip = document.getElementById('overlay-skip');
 bestScoreValueElement.textContent = bestScore;
 
 /* ----------------------------
+   Interactive Tutorial Logic
+   ---------------------------- */
+class InteractiveTutorial {
+  constructor() {
+    this.currentStep = 0;
+    this.clickedBoxes = new Set();
+    this.isActive = false;
+    
+    // Define the pairs in order: [index1, index2] (0-based)
+    this.pairs = [
+      [0, 1], // Pair 1: boxes with "1" (top-left, top-center)
+      [2, 5], // Pair 2: boxes with "2" (top-right, middle-right)
+      [3, 4], // Pair 3: boxes with "3" (middle-left, middle-center)
+      [6, 7]  // Pair 4: boxes with "4" (bottom-left, bottom-center)
+    ];
+    
+    this.tutorialBoxes = document.querySelectorAll('.tutorial-box');
+    this.startButton = document.getElementById('start-interactive-tutorial');
+    this.successPopup = document.getElementById('tutorial-success-popup');
+    this.nextButton = document.getElementById('tutorial-next-button');
+    this.instructions = document.getElementById('tutorial-instructions');
+    this.tutorialContainer = document.getElementById('interactive-tutorial-container');
+    
+    this.initializeEventListeners();
+  }
+  
+  initializeEventListeners() {
+    if (this.startButton) {
+      this.startButton.addEventListener('click', () => this.startInteractiveTutorial());
+    }
+    if (this.nextButton) {
+      this.nextButton.addEventListener('click', () => this.closePopup());
+    }
+    
+    this.tutorialBoxes.forEach((box, index) => {
+      box.addEventListener('click', () => this.handleBoxClick(index));
+    });
+  }
+  
+  showTutorial() {
+    if (this.tutorialContainer) {
+      this.tutorialContainer.style.display = 'block';
+    }
+  }
+  
+  hideTutorial() {
+    if (this.tutorialContainer) {
+      this.tutorialContainer.style.display = 'none';
+    }
+  }
+  
+  startInteractiveTutorial() {
+    this.isActive = true;
+    this.currentStep = 0;
+    this.clickedBoxes.clear();
+    
+    // Reset all boxes
+    this.tutorialBoxes.forEach(box => {
+      box.classList.remove('highlighted', 'clicked', 'completed');
+    });
+    
+    // Disable start button
+    this.startButton.disabled = true;
+    this.startButton.textContent = 'Tutorial Active...';
+    
+    // Update instructions
+    this.instructions.textContent = `Step ${this.currentStep + 1}/4: Click both highlighted boxes with "${this.getCurrentPairNumber()}"`;
+    
+    // Highlight first pair
+    this.highlightCurrentPair();
+  }
+  
+  getCurrentPairNumber() {
+    const currentPair = this.pairs[this.currentStep];
+    const firstBoxIndex = currentPair[0];
+    return this.tutorialBoxes[firstBoxIndex].textContent;
+  }
+  
+  highlightCurrentPair() {
+    if (this.currentStep < this.pairs.length) {
+      const currentPair = this.pairs[this.currentStep];
+      currentPair.forEach(index => {
+        this.tutorialBoxes[index].classList.add('highlighted');
+      });
+    }
+  }
+  
+  handleBoxClick(index) {
+    if (!this.isActive) return;
+    
+    const currentPair = this.pairs[this.currentStep];
+    
+    // Only allow clicking highlighted boxes
+    if (!currentPair.includes(index)) return;
+    
+    // Don't allow clicking already clicked boxes
+    if (this.clickedBoxes.has(index)) return;
+    
+    // Mark as clicked
+    this.clickedBoxes.add(index);
+    this.tutorialBoxes[index].classList.remove('highlighted');
+    this.tutorialBoxes[index].classList.add('clicked');
+    
+    // Check if both boxes in current pair are clicked
+    const pairClicked = currentPair.every(boxIndex => this.clickedBoxes.has(boxIndex));
+    
+    if (pairClicked) {
+      setTimeout(() => {
+        this.completePair();
+      }, 500);
+    }
+  }
+  
+  completePair() {
+    const currentPair = this.pairs[this.currentStep];
+    
+    // Blur completed pair
+    currentPair.forEach(index => {
+      this.tutorialBoxes[index].classList.remove('clicked');
+      this.tutorialBoxes[index].classList.add('completed');
+    });
+    
+    // Move to next step
+    this.currentStep++;
+    this.clickedBoxes.clear();
+    
+    if (this.currentStep < this.pairs.length) {
+      // Continue to next pair
+      setTimeout(() => {
+        this.instructions.textContent = `Step ${this.currentStep + 1}/4: Click both highlighted boxes with "${this.getCurrentPairNumber()}"`;
+        this.highlightCurrentPair();
+      }, 300);
+    } else {
+      // All pairs completed
+      setTimeout(() => {
+        this.showSuccessPopup();
+      }, 500);
+    }
+  }
+  
+  showSuccessPopup() {
+    this.isActive = false;
+    this.instructions.textContent = 'Tutorial completed! Well done!';
+    this.successPopup.style.display = 'flex';
+  }
+  
+  closePopup() {
+    this.successPopup.style.display = 'none';
+    this.resetTutorial();
+  }
+  
+  resetTutorial() {
+    // Reset everything
+    this.currentStep = 0;
+    this.clickedBoxes.clear();
+    this.isActive = false;
+    
+    // Reset all boxes
+    this.tutorialBoxes.forEach(box => {
+      box.classList.remove('highlighted', 'clicked', 'completed');
+    });
+    
+    // Reset button
+    this.startButton.disabled = false;
+    this.startButton.textContent = 'Start Tutorial';
+    
+    // Reset instructions
+    this.instructions.textContent = 'Click "Start Tutorial" to begin. Follow the highlighted pairs in order!';
+  }
+}
+
+// Initialize the interactive tutorial
+let interactiveTutorial = null;
+
+/* ----------------------------
    Utility / Logging
    ---------------------------- */
 function log(...args){ console.log('[nimblemind]', ...args); }
@@ -196,9 +430,13 @@ function showTutorialStep() {
       startTutorialBtn = document.createElement('button');
       startTutorialBtn.id = 'start-tutorial-btn';
       startTutorialBtn.className = 'overlay-button btn-start';
-      startTutorialBtn.textContent = 'Start Tutorial';
+      startTutorialBtn.textContent = 'Start Interactive Tutorial';
       startTutorialBtn.addEventListener('click', () => {
-        startTutorialLevels();
+        // Show interactive tutorial instead of the old tutorial levels
+        tutorialOverlay.style.display = 'none';
+        if (interactiveTutorial) {
+          interactiveTutorial.showTutorial();
+        }
       });
       overlaySkip.parentNode.appendChild(startTutorialBtn);
     }
@@ -795,6 +1033,9 @@ restartButton.addEventListener('click', ()=> startGame());
 
 /* On load: show tutorial overlay and run */
 window.addEventListener('load', ()=> {
+  // Initialize interactive tutorial
+  interactiveTutorial = new InteractiveTutorial();
+  
   // show tutorial slides first
   currentTutorialStep = 0;
   tutorialOverlay.style.display = 'flex';
