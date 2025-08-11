@@ -1118,47 +1118,54 @@ function generateInitialGrid() {
   }
 }
 
-/* add a new row at bottom with intelligent options */
+/* add a new row at bottom - appends all current numbers */
 function addRow() {
   if (currentRows >= totalRows) { showMessage('Grid is full'); return; }
   if (addRowClickedCount >= MAX_ADD_ROW_USES) { showMessage('Maximum add row uses reached'); return; }
   addRowClickedCount++;
-  const newRow = new Array(numColumns).fill(null);
-  // gather unmatched values
-  const unmatched = [];
-  for (let r=0;r<currentRows; r++){
-    for (let c=0;c<numColumns; c++){
-      if (grid[r][c] !== null) unmatched.push(grid[r][c]);
+  
+  // gather all current numbers from the grid (unmatched values)
+  const allNumbers = [];
+  for (let r=0; r<currentRows; r++){
+    for (let c=0; c<numColumns; c++){
+      if (grid[r][c] !== null) allNumbers.push(grid[r][c]);
     }
   }
-  // fill row depending on click count (as before)
-  if (addRowClickedCount === 1) {
-    for (let i=0;i<numColumns && i<unmatched.length;i++) newRow[i] = unmatched[i];
-  } else if (addRowClickedCount === 2) {
-    for (let i=0;i<numColumns && i<unmatched.length;i++) {
-      const num = unmatched[i];
-      const comp = 10 - num;
-      newRow[i] = (comp > 0 && comp < 10 && Math.random()>0.4) ? comp : num;
+  
+  // if no numbers to append, show message and return
+  if (allNumbers.length === 0) {
+    showMessage('No numbers to append');
+    addRowClickedCount--; // don't count this as a use
+    return;
+  }
+  
+  // append all numbers by adding new rows as needed
+  let numbersToPlace = allNumbers.slice(); // copy array
+  let currentRowIndex = currentRows;
+  
+  while (numbersToPlace.length > 0 && currentRowIndex < totalRows) {
+    // create new row
+    const newRow = new Array(numColumns).fill(null);
+    
+    // fill this row with as many numbers as possible
+    for (let c = 0; c < numColumns && numbersToPlace.length > 0; c++) {
+      newRow[c] = numbersToPlace.shift();
     }
+    
+    // add the row to the grid
+    if (!grid[currentRowIndex]) grid[currentRowIndex] = new Array(numColumns).fill(null);
+    grid[currentRowIndex] = newRow.slice();
+    currentRowIndex++;
+    currentRows++;
+  }
+  
+  // if we couldn't place all numbers due to grid being full
+  if (numbersToPlace.length > 0) {
+    showMessage(`Grid full! Could only add ${allNumbers.length - numbersToPlace.length} numbers`);
   } else {
-    // strategic pairs + random fill
-    const pairsToCreate = Math.min(Math.ceil(Math.random()*2), Math.floor(unmatched.length/2));
-    for (let i=0;i<pairsToCreate;i++){
-      const num = unmatched[Math.floor(Math.random()*unmatched.length)];
-      let pos;
-      do { pos = Math.floor(Math.random()*numColumns); } while (newRow[pos] !== null);
-      if (Math.random() > 0.5) newRow[pos] = num; else {
-        const comp = 10 - num;
-        newRow[pos] = (comp > 0 && comp < 10) ? comp : num;
-      }
-    }
-    for (let i=0;i<numColumns;i++) if (newRow[i] === null) newRow[i] = Math.floor(Math.random()*9)+1;
+    showMessage(`Added ${allNumbers.length} numbers to the grid`);
   }
-
-  // put newRow into grid at index currentRows (0-based)
-  if (!grid[currentRows]) grid[currentRows] = new Array(numColumns).fill(null);
-  grid[currentRows] = newRow.slice();
-  currentRows++;
+  
   renderGrid();
   updateAddRowButton();
   checkGameStatus();
