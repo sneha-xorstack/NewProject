@@ -119,7 +119,8 @@ let tutorialSteps = [
   { title: "Match Pairs of Numbers", text: "Find pairs of numbers that are the same, or whose sum is 10, and tap them." },
   { title: "Check Different Directions", text: "Pairs can be matched horizontally, vertically, or diagonally. They can also be separated by matched or empty cells." },
   { title: "Use the Add Row Button", text: "If there are no more pairs, tap the '+' button to add a new row of numbers to the bottom of the grid." },
-  { title: "Clear the Board!", text: "Your goal is to match all the numbers on the board." }
+  { title: "Clear the Board!", text: "Your goal is to match all the numbers on the board." },
+  { title: "Let's Play!", text: "Complete two quick tutorial levels to learn the rules." }
 ];
 let currentTutorialStep = 0;
 
@@ -181,11 +182,41 @@ function showTutorialStep() {
   tutorialText.textContent = step.text;
   tutorialStepCounter.textContent = `${currentTutorialStep+1}/${tutorialSteps.length}`;
   overlayPrev.style.display = currentTutorialStep === 0 ? 'none' : 'inline-block';
-  overlayNext.textContent = (currentTutorialStep === tutorialSteps.length - 1) ? 'Start Tutorial' : 'Next';
   
-  // Hide Skip Tutorial button during the first 4 intro slides (steps 0-3)
-  // Only show it on the final step when user can choose to start tutorial levels
-  overlaySkip.style.display = (currentTutorialStep === tutorialSteps.length - 1) ? 'inline-block' : 'none';
+  // Handle different button states based on the step
+  if (currentTutorialStep === tutorialSteps.length - 1) {
+    // Let's Play! screen - hide Next button and show both action buttons
+    overlayNext.style.display = 'none';
+    overlaySkip.style.display = 'inline-block';
+    overlaySkip.textContent = 'Skip Tutorial';
+    
+    // We'll add Start Tutorial button dynamically
+    let startTutorialBtn = document.getElementById('start-tutorial-btn');
+    if (!startTutorialBtn) {
+      startTutorialBtn = document.createElement('button');
+      startTutorialBtn.id = 'start-tutorial-btn';
+      startTutorialBtn.className = 'overlay-button btn-start';
+      startTutorialBtn.textContent = 'Start Tutorial';
+      startTutorialBtn.addEventListener('click', () => {
+        startTutorialLevels();
+      });
+      overlaySkip.parentNode.appendChild(startTutorialBtn);
+    }
+    startTutorialBtn.style.display = 'inline-block';
+  } else {
+    // Regular tutorial steps
+    overlayNext.style.display = 'inline-block';
+    overlayNext.textContent = 'Next';
+    
+    // Hide Skip Tutorial button on Clear the Board screen (step 3) and earlier steps
+    overlaySkip.style.display = 'none';
+    
+    // Hide Start Tutorial button if it exists
+    const startTutorialBtn = document.getElementById('start-tutorial-btn');
+    if (startTutorialBtn) {
+      startTutorialBtn.style.display = 'none';
+    }
+  }
   
   tutorialOverlay.style.display = 'flex';
 }
@@ -741,10 +772,8 @@ overlayNext.addEventListener('click', ()=> {
   if (currentTutorialStep < tutorialSteps.length - 1) {
     currentTutorialStep++;
     showTutorialStep();
-  } else {
-    // final -> start tutorial levels
-    startTutorialLevels();
   }
+  // Note: No else clause needed since the Let's Play screen handles its own buttons
 });
 overlayPrev.addEventListener('click', ()=> {
   if (currentTutorialStep > 0) { currentTutorialStep--; showTutorialStep(); }
