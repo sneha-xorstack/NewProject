@@ -1120,7 +1120,6 @@ function generateInitialGrid() {
 
 /* add a new row at bottom - appends all current numbers */
 function addRow() {
-  if (currentRows >= totalRows) { showMessage('Grid is full'); return; }
   if (addRowClickedCount >= MAX_ADD_ROW_USES) { showMessage('Maximum add row uses reached'); return; }
   addRowClickedCount++;
   
