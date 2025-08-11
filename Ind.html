@@ -1118,27 +1118,49 @@ function generateInitialGrid() {
   }
 }
 
-/* add a new row at bottom - appends all current numbers */
+/* add a new row at bottom - duplicates the entire current grid */
 function addRow() {
   if (addRowClickedCount >= MAX_ADD_ROW_USES) { showMessage('Maximum add row uses reached'); return; }
   addRowClickedCount++;
   
-  // gather all current numbers from the grid (unmatched values)
+  // gather all current numbers from the entire grid (including dulled/matched numbers)
   const allNumbers = [];
-  for (let r=0; r<currentRows; r++){
-    for (let c=0; c<numColumns; c++){
-      if (grid[r][c] !== null) allNumbers.push(grid[r][c]);
+  
+  // collect all numbers from the current active grid, including matched ones
+  for (let r = 0; r < currentRows; r++) {
+    for (let c = 0; c < numColumns; c++) {
+      const key = `${r}-${c}`;
+      if (matchedMap[key]) {
+        // include the dulled number if it exists
+        if (dulledNumbers[key] !== undefined && dulledNumbers[key] !== null) {
+          allNumbers.push(dulledNumbers[key]);
+        }
+      } else if (grid[r][c] !== null) {
+        // include active numbers
+        allNumbers.push(grid[r][c]);
+      }
     }
   }
   
-  // if no numbers to append, show message and return
+  // if no numbers to duplicate, show message and return
   if (allNumbers.length === 0) {
-    showMessage('No numbers to append');
+    showMessage('No numbers to duplicate');
     addRowClickedCount--; // don't count this as a use
     return;
   }
   
-  // append all numbers by adding new rows as needed
+  // check if we have enough space in the grid
+  const numbersPerRow = numColumns;
+  const rowsNeeded = Math.ceil(allNumbers.length / numbersPerRow);
+  const availableRows = totalRows - currentRows;
+  
+  if (rowsNeeded > availableRows) {
+    showMessage('Grid is full - cannot add more numbers');
+    addRowClickedCount--; // don't count this as a use
+    return;
+  }
+  
+  // duplicate the entire current grid by adding all numbers
   let numbersToPlace = allNumbers.slice(); // copy array
   let currentRowIndex = currentRows;
   
@@ -1158,12 +1180,7 @@ function addRow() {
     currentRows++;
   }
   
-  // if we couldn't place all numbers due to grid being full
-  if (numbersToPlace.length > 0) {
-    showMessage(`Grid full! Could only add ${allNumbers.length - numbersToPlace.length} numbers`);
-  } else {
-    showMessage(`Added ${allNumbers.length} numbers to the grid`);
-  }
+  showMessage(`Added ${allNumbers.length} numbers to the grid`);
   
   renderGrid();
   updateAddRowButton();
